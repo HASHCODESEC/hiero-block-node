@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# RFH Flavor E2E Test
+#
+# Validates that plugin-profile-rfh.yaml deploys correctly and that the cloud-only
+# persistence loop closes without any local block provider:
+#   backfill (periodic scan) → block-verification → cloud-storage-archive/expanded
+#   → addStoredBlockRange → backfill skips re-fetching (loop closed)
+#
+# Topology: 1cn-2bn-rfh
+#   BN1: default profile — receives live stream from CN1, serves MN
+#   BN2: RFH flavor — no stream-publisher/subscriber; discovers blocks via periodic
+#        backfill scan from BN1; persists exclusively to RustFS
+#
+# Prerequisites:
+#   - Topology 1cn-2bn-rfh deployed (deploys RustFS before BN1/BN2)
+#   - plugin-profile-rfh.yaml applied to BN2 via flavor: rfh in topology
+#
+# Usage:
+#   task test:run TEST_FILE=tests/rfh-flavor.yaml TOPOLOGY=1cn-2bn-rfh
+
+name: rfh-flavor
+description: "RFH-flavor BN backfills from default BN and archives to RustFS"
+
+events:
+  - id: initial-status
+    type: network-status
+    description: "Verify BN1, BN2, MN are up"
+    delay: 5
+
+  - id: initial-metrics
+    type: print-metrics
+    description: "Baseline metrics for all block nodes"
+    delay: 10
+    args:
+      target: all
+
+  - id: accumulate
+    type: sleep
+    # 60s BACKFILL_INITIAL_DELAY on BN2 + time for BN1 to accumulate blocks + backfill + cloud upload.
+    # Expanded bucket gets an object per block; TAR bucket closes a group every 10 blocks (groupingLevel 1).
+    description: "Wait 300s — BN2 waits 60s then backfills from BN1 and archives to RustFS"
+    delay: 15
+    args:
+      seconds: 300
+
+  - id: verify-archive-expanded
+    type: archive-files-exist
+    description: "Expanded bucket has >= 5 files — proves backfill -> verify -> cloud-storage-expanded loop closed multiple times"
+    delay: 320
+    args:
+      bucket: block-archive-expanded
+      min_files: 5
+
+  - id: verify-archive-tar
+    type: archive-files-exist
+    description: "TAR bucket has >= 2 files - each file is a 10-block group, so >= 2 proves multiple archival rounds (groupingLevel 1)"
+    delay: 320
+    args:
+      bucket: block-archive-tar
+      min_files: 2
+
+  - id: final-metrics
+    type: print-metrics
+    description: "Final metrics summary"
+    delay: 325
+    args:
+      target: all
+
+assertions:
+  - id: bn1-healthy
+    type: node-healthy
+    description: "BN1 (default profile) is running"
+    target: block-node-1
+
+  - id: bn2-healthy
+    type: node-healthy
+    description: "BN2 (RFH flavor) is running - proves plugin-profile-rfh.yaml resolved all nine jars"
+    target: block-node-2
+
+  - id: mn1-healthy
+    type: node-healthy
+    description: "MN importer is running - BN1 (default-flavor) is unaffected by the RFH neighbor and still serves the MN"
+    target: importer
+
+  - id: bn1-no-errors
+    type: no-errors
+    description: "No hard errors on BN1 (verify_failed tolerated: TSS takes ~100 blocks to stabilize)"
+    target: block-node-1
+    args:
+      skip_verify_failed: true
+
+  - id: bn2-no-errors
+    type: no-errors
+    description: "No hard errors on BN2 (verify_failed tolerated: TSS takes ~100 blocks to stabilize)"
+    target: block-node-2
+    args:
+      skip_verify_failed: true

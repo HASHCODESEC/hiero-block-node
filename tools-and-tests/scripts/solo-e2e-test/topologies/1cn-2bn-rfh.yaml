@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: Apache-2.0
+# 1 Consensus Node, 2 Block Nodes: one default-profile BN and one RFH-flavor BN.
+#
+# BN1: default profile — receives live stream from CN1, serves MN.
+# BN2: RFH flavor — no stream-publisher/subscriber; discovers blocks via periodic
+#      backfill scan from BN1 and archives them to RustFS.
+#
+# This topology validates that plugin-profile-rfh.yaml deploys successfully and
+# that the cloud-only persistence loop (backfill → verify → archive → addStoredBlockRange)
+# closes without any local block provider.
+
+name: 1cn-2bn-rfh
+description: "1 CN, 1 default BN, 1 RFH-flavor BN backfilling to RustFS"
+
+s3_nodes:
+  rustfs-1:
+    buckets: [block-archive-tar, block-archive-expanded]
+    port: 9000
+
+block_nodes:
+  block-node-1:
+    address: block-node-1
+    port: 40840
+  block-node-2:
+    address: block-node-2
+    port: 40840
+    flavor: rfh
+    peers: [block-node-1]
+    greedy: true
+    archive:
+      backend: rustfs
+      node: rustfs-1
+
+consensus_nodes:
+  node1:
+    block_nodes: [block-node-1]    # MUST NOT list block-node-2 — it has no stream-publisher
+
+mirror_nodes:
+  mirror-1:
+    block_nodes: [block-node-1]    # MUST NOT list block-node-2 — it has no stream-subscriber
+
+relay_nodes: {}
+explorer_nodes: {}

@@ -478,6 +478,9 @@ Topologies define network configuration. Located in `./topologies/`.
 | `3cn-1bn`             | 3  | 1  | 1  |   0   |    0     | Single BN receiving from multiple CNs               |
 | `minimal`             | 1  | 1  | 0  |   0   |    0     | CN+BN only, no mirror/relay/explorer                |
 | `2cn-2bn-backfill`    | 2  | 2  | 1  |   0   |    0     | Backfill testing, BN recovery after data loss       |
+| `2cn-2bn-archive`     | 2  | 2  | 1  |   0   |    0     | Cloud-storage archiving to RustFS + backfill        |
+| `1cn-2bn-rfh`         | 1  | 2  | 1  |   0   |    0     | RFH-flavor BN (cloud-only persistence via backfill) |
+| `2cn-3bn-flavors`     | 2  | 3  | 1  |   0   |    0     | BN plugin flavors: lfh, minimal, all                |
 | `7cn-3bn-distributed` | 7  | 3  | 1  |   0   |    0     | Distributed streaming, grouped CN->BN with backfill |
 | `single-wrb-rsa`      | 1  | 1  | 1  |   0   |    0     | WRB (wrapped record blocks) verified via RSA roster |
 | `3cn-2bn-wrb-rsa`     | 3  | 2  | 1  |   0   |    0     | WRB fan-out verified via RSA roster                 |
@@ -654,6 +657,9 @@ task test:validate TEST_FILE=tests/basic-load.yaml
 | `tests/high-load.yaml`               | High load test (5000 TPS cap)                       |
 | `tests/node-restart-resilience.yaml` | BN recovery after restart during load               |
 | `tests/full-history-backfill.yaml`   | BN backfills history while ingesting live blocks    |
+| `tests/archive-backfill.yaml`        | Cloud archiving to RustFS with node replacement     |
+| `tests/rfh-flavor.yaml`              | RFH-flavor BN cloud-only persistence loop           |
+| `tests/bn-flavors.yaml`              | lfh / minimal / all plugin profiles                 |
 | `tests/rsa-roster-verification.yaml` | Blocks verified via the RSA roster (WRB topologies) |
 
 ### Test Definition Schema
@@ -939,6 +945,9 @@ Tests are validated against topologies before execution. The matrix defines whic
 | `3cn-1bn`             | `smoke-test`                                          |
 | `fan-out-3cn-2bn`     | `smoke-test`                                          |
 | `2cn-2bn-backfill`    | `full-history-backfill`                               |
+| `2cn-2bn-archive`     | `archive-backfill`                                    |
+| `1cn-2bn-rfh`         | `rfh-flavor`                                          |
+| `2cn-3bn-flavors`     | `bn-flavors`                                          |
 | `7cn-3bn-distributed` | `smoke-test`                                          |
 | `single-wrb-rsa`      | `smoke-test`, `rsa-roster-verification`               |
 | `3cn-2bn-wrb-rsa`     | `smoke-test`, `rsa-roster-verification`               |

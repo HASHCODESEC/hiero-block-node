@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Fast backfill scan for the RFH node (block-node-2).
+# BN2 has no live-stream producer, so gap discovery relies entirely on the periodic scan.
+# Shorter intervals keep the E2E window from growing too large.
+blockNode:
+  config:
+    BACKFILL_SCAN_INTERVAL: "10_000"
+    BACKFILL_INITIAL_DELAY: "60_000"
+    BACKFILL_DELAY_BETWEEN_BATCHES: "2_000"
+    # Point TSS roster bootstrap at BN1 so block-verification has a public key.
+    # Without this, roster.bootstrap.tss.blockNodeSourcesPath stays empty and
+    # ALL backfilled blocks fail verification, breaking the cloud-only persistence loop.
+    ROSTER_BOOTSTRAP_TSS_BLOCK_NODE_SOURCES_PATH: "/opt/hiero/block-node/backfill/block-node-sources.json"
